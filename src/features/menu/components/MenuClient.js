@@ -22,7 +22,8 @@ const MENU_CACHE_KEY = "menu_cache_v1";
 const MENU_CACHE_TTL_MS = 60_000;
 
 export default function MenuClient({ initialItems = [], initialAllItems = null, initialSelectedCategory = "All" }) {
-  const [allItems, setAllItems] = useState((initialAllItems && initialAllItems.length ? initialAllItems : initialItems) || []);
+  const hydratedItems = (initialAllItems && initialAllItems.length ? initialAllItems : initialItems) || [];
+  const [allItems, setAllItems] = useState(hydratedItems);
   const [selectedCategory, setSelectedCategory] = useState(initialSelectedCategory || "All");
   const [loading, setLoading] = useState(!initialItems || initialItems.length === 0);
   const [error, setError] = useState(null);
@@ -70,16 +71,19 @@ export default function MenuClient({ initialItems = [], initialAllItems = null, 
     } catch (err) {
       console.error("Menu fetch error:", err);
       setError(err.message || "Failed to load menu items. Please try again.");
-      setAllItems([]);
+      // Keep any already-hydrated server items so UI does not regress to empty state.
+      setAllItems((prev) => (prev.length ? prev : []));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // Revalidate in background on mount to keep data fresh
-    fetchItems();
-  }, [fetchItems]);
+    // Avoid forcing a client refetch when the page already has server-rendered menu data.
+    if (!hydratedItems.length) {
+      fetchItems();
+    }
+  }, [fetchItems, hydratedItems.length]);
 
   const categories = useMemo(() => {
     // Use the fixed category list. (Keeps UI predictable; add discovered categories if desired.)

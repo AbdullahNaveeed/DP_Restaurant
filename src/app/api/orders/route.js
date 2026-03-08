@@ -48,11 +48,23 @@ export async function POST(req) {
       }
 
       const fallbackOrder = await appendFallbackOrder(orderPayload);
-      return NextResponse.json(fallbackOrder, { status: 201 });
+      return NextResponse.json(
+        {
+          orderId: String(fallbackOrder._id),
+          ...fallbackOrder,
+        },
+        { status: 201 }
+      );
     }
 
     const order = await Order.create(orderPayload);
-    return NextResponse.json(order, { status: 201 });
+    return NextResponse.json(
+      {
+        orderId: String(order._id),
+        ...order.toObject(),
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Order POST error:", error);
     return NextResponse.json({ error: "Failed to place order" }, { status: 500 });

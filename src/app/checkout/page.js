@@ -76,10 +76,12 @@ export default function CheckoutPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to place order");
+      const orderId = data.orderId || data._id;
+      if (!orderId) throw new Error("Order created but no order ID was returned");
 
       toast.success("Order placed successfully");
       clearCart();
-      router.push(`/order-confirmation?id=${data._id}`);
+      router.push(`/order-confirmation?id=${orderId}`);
     } catch (error) {
       toast.error(error.message);
     } finally {
