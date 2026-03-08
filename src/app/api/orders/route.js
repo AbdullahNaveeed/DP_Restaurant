@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/db/mongoose";
 import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
@@ -27,15 +28,24 @@ export async function POST(req) {
     const body = await req.json();
     const { customerName, phone, address, items, totalAmount, paymentMethod } = body;
 
-    if (!customerName || !phone || !address || !items?.length || !totalAmount || !paymentMethod) {
+    if (!customerName || !phone || !address || !items?.length || totalAmount == null || !paymentMethod) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
+
+    const normalizedItems = items.map((item) => {
+      const menuItemId = String(item.menuItem || "").trim();
+      return {
+        ...item,
+        // Avoid Mongoose ObjectId cast errors for fallback/static menu IDs.
+        menuItem: mongoose.Types.ObjectId.isValid(menuItemId) ? menuItemId : undefined,
+      };
+    });
 
     const orderPayload = {
       customerName,
       phone,
       address,
-      items,
+      items: normalizedItems,
       totalAmount,
       paymentMethod,
       status: "Pending",
