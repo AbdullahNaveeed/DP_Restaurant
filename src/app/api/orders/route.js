@@ -24,7 +24,16 @@ export async function POST(req) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    const conn = await dbConnect();
+    let conn = null;
+    try {
+      conn = await dbConnect();
+    } catch (dbError) {
+      if (isProduction) {
+        throw dbError;
+      }
+      console.warn("Order POST DB connect failed, using fallback store:", dbError.message);
+      conn = null;
+    }
     const body = await req.json();
     const { customerName, phone, address, items, totalAmount, paymentMethod } = body;
 
@@ -91,7 +100,16 @@ export async function GET(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conn = await dbConnect();
+    let conn = null;
+    try {
+      conn = await dbConnect();
+    } catch (dbError) {
+      if (isProduction) {
+        throw dbError;
+      }
+      console.warn("Orders GET DB connect failed, using fallback store:", dbError.message);
+      conn = null;
+    }
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
