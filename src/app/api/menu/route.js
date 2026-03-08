@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/mongoose";
 import MenuItem from "@/models/MenuItem";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
@@ -8,10 +8,18 @@ import {
   normalizeCategory,
   filterFallbackMenu,
   toPublicMenuPayload,
+  buildMenuCacheKeys,
 } from "@/services/menu/menu.service";
+
+async function invalidateMenuCache() {
+  const keys = buildMenuCacheKeys();
+  await Promise.all(keys.map((key) => cache.del(key)));
+}
 
 // GET /api/menu - Public: list available menu items
 export async function GET(req) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const { searchParams } = new URL(req.url);
     const category = normalizeCategory(searchParams.get("category"));
@@ -21,6 +29,10 @@ export async function GET(req) {
     const conn = await dbConnect();
 
     if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+      }
+
       const payload = filterFallbackMenu(category, showAll);
       await cache.set(cacheKey, payload, 30_000);
       return NextResponse.json(payload, {
@@ -43,14 +55,6 @@ export async function GET(req) {
       .sort({ category: 1, name: 1 })
       .lean();
 
-    if (items.length === 0) {
-      const payload = filterFallbackMenu(category, showAll);
-      await cache.set(cacheKey, payload, 30_000);
-      return NextResponse.json(payload, {
-        headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" },
-      });
-    }
-
     const payload = toPublicMenuPayload(items);
     await cache.set(cacheKey, payload, 30_000);
     return NextResponse.json(payload, {
@@ -58,6 +62,11 @@ export async function GET(req) {
     });
   } catch (error) {
     console.error("Menu GET error:", error);
+
+    if (isProduction) {
+      return NextResponse.json({ error: "Failed to fetch menu" }, { status: 500 });
+    }
+
     const { searchParams } = new URL(req.url);
     const category = normalizeCategory(searchParams.get("category"));
     const showAll = searchParams.get("all") === "true";
@@ -115,6 +124,8 @@ export async function POST(req) {
       variants: Array.isArray(variants) ? variants : [],
       options: Array.isArray(options) ? options : [],
     });
+
+    await invalidateMenuCache();
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {

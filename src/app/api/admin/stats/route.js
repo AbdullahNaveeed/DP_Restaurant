@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/mongoose";
 import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
@@ -8,6 +8,8 @@ import { computeStatsFromOrders } from "@/services/admin/stats.service";
 
 // GET /api/admin/stats - Admin: get dashboard analytics
 export async function GET(req) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
@@ -22,6 +24,10 @@ export async function GET(req) {
     }
 
     if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+      }
+
       const list = await readFallbackOrders();
       const result = computeStatsFromOrders(list);
       await cache.set(cacheKey, result, 15_000);

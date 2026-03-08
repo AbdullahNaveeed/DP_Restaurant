@@ -5,6 +5,8 @@ import { comparePassword, signToken } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req) {
+    const isProduction = process.env.NODE_ENV === "production";
+
     try {
         // Basic rate limiting by IP to prevent brute-force attempts
         const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
@@ -23,8 +25,12 @@ export async function POST(req) {
             );
         }
 
-        // If DB is unavailable, allow demo admin credentials as a fallback
+        // Restrict fallback credentials to non-production only.
         if (!conn) {
+            if (isProduction) {
+                return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+            }
+
             const demoEmail = "admin@ghanishinwari.com";
             const demoPass = "admin123";
             if (email === demoEmail && password === demoPass) {

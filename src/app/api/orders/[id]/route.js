@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/mongoose";
 import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
@@ -6,6 +6,8 @@ import { updateFallbackOrderStatus } from "@/services/orders/order-fallback.serv
 
 // PATCH /api/orders/[id] - Admin: update order status
 export async function PATCH(req, context) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
@@ -43,6 +45,10 @@ export async function PATCH(req, context) {
     };
 
     if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+      }
+
       const result = await updateFallbackOrderStatus(id, status);
       if (result.error) {
         return NextResponse.json({ error: result.error }, { status: result.status });
@@ -52,11 +58,7 @@ export async function PATCH(req, context) {
 
     const order = await Order.findById(id);
     if (!order) {
-      const result = await updateFallbackOrderStatus(id, status);
-      if (result.error) {
-        return NextResponse.json({ error: result.error }, { status: result.status });
-      }
-      return NextResponse.json(result.value);
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     const current = order.status;

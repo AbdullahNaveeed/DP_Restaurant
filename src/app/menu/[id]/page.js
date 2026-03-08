@@ -13,7 +13,13 @@ export default async function Page({ params }) {
   let payload = null;
   try {
     if (id) {
-      const conn = await dbConnect();
+      let conn = null;
+      try {
+        conn = await dbConnect();
+      } catch (err) {
+        console.error("Menu item page DB connect failed:", err);
+        conn = null;
+      }
 
       if (conn) {
         const item = await MenuItem.findById(id).lean();

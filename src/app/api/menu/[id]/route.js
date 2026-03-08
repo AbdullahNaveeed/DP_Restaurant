@@ -1,15 +1,24 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/mongoose";
 import MenuItem from "@/models/MenuItem";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
+import cache from "@/lib/cache";
 import {
   getFallbackMenuItemById,
   toPublicMenuPayload,
+  buildMenuCacheKeys,
 } from "@/services/menu/menu.service";
+
+async function invalidateMenuCache() {
+  const keys = buildMenuCacheKeys();
+  await Promise.all(keys.map((key) => cache.del(key)));
+}
 
 // GET /api/menu/[id] - Public: fetch one item from DB or fallback menu
 export async function GET(req, context) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const { params } = await context;
     const idFromContext = params?.id;
@@ -24,6 +33,10 @@ export async function GET(req, context) {
     const conn = await dbConnect();
 
     if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+      }
+
       const fallback = getFallbackMenuItemById(id);
       if (!fallback) {
         return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
@@ -33,6 +46,10 @@ export async function GET(req, context) {
 
     const item = await MenuItem.findById(id).lean();
     if (!item) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
+      }
+
       const fallback = getFallbackMenuItemById(id);
       if (!fallback) {
         return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
@@ -86,6 +103,8 @@ export async function PUT(req, context) {
       return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
+    await invalidateMenuCache();
+
     return NextResponse.json(item);
   } catch (error) {
     console.error("Menu PUT error:", error);
@@ -113,6 +132,8 @@ export async function DELETE(req, context) {
     if (!item) {
       return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
+
+    await invalidateMenuCache();
 
     return NextResponse.json({ message: "Menu item deleted successfully" });
   } catch (error) {

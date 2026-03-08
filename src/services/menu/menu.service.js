@@ -46,3 +46,18 @@ export function getFallbackMenuItemById(id) {
   if (!found) return null;
   return toPublicMenuPayload([found])[0];
 }
+
+export function buildMenuCacheKeys() {
+  const keys = new Set();
+  const categories = [null, ...VALID_MENU_CATEGORIES];
+  const showAllOptions = [false, true];
+
+  for (const category of categories) {
+    for (const showAll of showAllOptions) {
+      const categoryKey = category || "all";
+      keys.add(`menu:category=${categoryKey}:showAll=${showAll}`);
+    }
+  }
+
+  return [...keys];
+}

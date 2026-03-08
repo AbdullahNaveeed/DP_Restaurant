@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { apiRequest } from "@/lib/http/api-client";
 
 const STATUS_OPTIONS = ["All", "Pending", "Preparing", "Delivered"];
 const NEXT_STATUS_MAP = {
@@ -31,10 +32,10 @@ export default function AdminOrdersPage() {
 
     try {
       const url = filter === "All" ? "/api/orders" : `/api/orders?status=${filter}`;
-      const res = await fetch(url);
-      if (res.ok) setOrders(await res.json());
-    } catch {
-      toast.error("Failed to load orders");
+      const data = await apiRequest(url);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toast.error(error.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -46,14 +47,12 @@ export default function AdminOrdersPage() {
 
   const updateStatus = async (id, status) => {
     try {
-      const res = await fetch(`/api/orders/${id}`, {
+      await apiRequest(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
         credentials: "same-origin",
       });
-
-      if (!res.ok) throw new Error("Update failed");
 
       toast.success("Order status updated successfully.");
       fetchOrders();

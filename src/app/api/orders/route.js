@@ -1,9 +1,8 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/mongoose";
 import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import getRedisClient from "@/lib/redis/client";
 import {
   appendFallbackOrder,
   listFallbackOrders,
@@ -11,6 +10,8 @@ import {
 
 // POST /api/orders - Public: place a new order
 export async function POST(req) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -30,7 +31,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    const jobPayload = {
+    const orderPayload = {
       customerName,
       phone,
       address,
@@ -41,27 +42,17 @@ export async function POST(req) {
       createdAt: new Date().toISOString(),
     };
 
-    const redis = getRedisClient();
-    if (redis) {
-      try {
-        await redis.lpush("queue:orders", JSON.stringify(jobPayload));
-        return NextResponse.json({ message: "Order queued" }, { status: 202 });
-      } catch (e) {
-        console.error("Failed to enqueue order:", e);
+    if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
       }
+
+      const fallbackOrder = await appendFallbackOrder(orderPayload);
+      return NextResponse.json(fallbackOrder, { status: 201 });
     }
 
-    if (conn) {
-      const order = await Order.create(jobPayload);
-      return NextResponse.json(order, { status: 201 });
-    }
-
-    // Keep non-blocking behavior when DB and Redis are unavailable.
-    void appendFallbackOrder(jobPayload).catch((fsErr) => {
-      console.error("Failed to write fallback order (background):", fsErr);
-    });
-
-    return NextResponse.json({ message: "Order accepted (offline)" }, { status: 201 });
+    const order = await Order.create(orderPayload);
+    return NextResponse.json(order, { status: 201 });
   } catch (error) {
     console.error("Order POST error:", error);
     return NextResponse.json({ error: "Failed to place order" }, { status: 500 });
@@ -70,6 +61,8 @@ export async function POST(req) {
 
 // GET /api/orders - Admin: list all orders
 export async function GET(req) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
@@ -86,6 +79,10 @@ export async function GET(req) {
     }
 
     if (!conn) {
+      if (isProduction) {
+        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+      }
+
       const list = await listFallbackOrders(filter.status || null);
       return NextResponse.json(list);
     }

@@ -5,8 +5,13 @@ import MenuClient from "@/features/menu/components/MenuClient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default async function Page({ searchParams }) {
-  // Attempt a background DB connect; only query if a working connection
-  const conn = await dbConnect();
+  let conn = null;
+  try {
+    conn = await dbConnect();
+  } catch (e) {
+    console.error("Menu page DB connect failed:", e);
+    conn = null;
+  }
 
   let items = [];
   try {
