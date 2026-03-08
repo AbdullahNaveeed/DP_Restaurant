@@ -55,7 +55,7 @@ export default function AdminOrdersPage() {
       });
 
       toast.success("Order status updated successfully.");
-      fetchOrders();
+      await fetchOrders();
     } catch (err) {
       toast.error(err.message);
     }

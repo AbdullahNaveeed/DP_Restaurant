@@ -18,21 +18,21 @@ async function invalidateMenuCache() {
 
 // GET /api/menu - Public: list available menu items
 export async function GET(req) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
     const { searchParams } = new URL(req.url);
     const category = normalizeCategory(searchParams.get("category"));
     const showAll = searchParams.get("all") === "true";
     const cacheKey = `menu:category=${category || "all"}:showAll=${showAll}`;
 
-    const conn = await dbConnect();
+    let conn = null;
+    try {
+      conn = await dbConnect();
+    } catch (dbError) {
+      console.warn("Menu GET DB connect failed, using fallback menu:", dbError.message);
+      conn = null;
+    }
 
     if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
       const payload = filterFallbackMenu(category, showAll);
       await cache.set(cacheKey, payload, 30_000);
       return NextResponse.json(payload, {
@@ -62,10 +62,6 @@ export async function GET(req) {
     });
   } catch (error) {
     console.error("Menu GET error:", error);
-
-    if (isProduction) {
-      return NextResponse.json({ error: "Failed to fetch menu" }, { status: 500 });
-    }
 
     const { searchParams } = new URL(req.url);
     const category = normalizeCategory(searchParams.get("category"));

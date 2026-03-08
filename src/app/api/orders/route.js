@@ -35,7 +35,8 @@ export async function POST(req) {
       conn = null;
     }
     const body = await req.json();
-    const { customerName, phone, address, items, totalAmount, paymentMethod } = body;
+    const { customerName, phone, address, items, paymentMethod } = body;
+    const totalAmount = body.totalAmount ?? body.totalPrice;
 
     if (!customerName || !phone || !address || !items?.length || totalAmount == null || !paymentMethod) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -69,6 +70,7 @@ export async function POST(req) {
       const fallbackOrder = await appendFallbackOrder(orderPayload);
       return NextResponse.json(
         {
+          success: true,
           orderId: String(fallbackOrder._id),
           ...fallbackOrder,
         },
@@ -79,6 +81,7 @@ export async function POST(req) {
     const order = await Order.create(orderPayload);
     return NextResponse.json(
       {
+        success: true,
         orderId: String(order._id),
         ...order.toObject(),
       },

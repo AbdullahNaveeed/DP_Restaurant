@@ -70,6 +70,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           totalAmount,
+          totalPrice: totalAmount,
           paymentMethod,
         }),
       });

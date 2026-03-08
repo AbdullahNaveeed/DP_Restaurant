@@ -14,7 +14,16 @@ export async function PATCH(req, context) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conn = await dbConnect();
+    let conn = null;
+    try {
+      conn = await dbConnect();
+    } catch (dbError) {
+      if (isProduction) {
+        throw dbError;
+      }
+      console.warn("Order PATCH DB connect failed, using fallback store:", dbError.message);
+      conn = null;
+    }
     const params = context?.params ?? (await context)?.params ?? {};
     let id = params.id;
 
@@ -53,7 +62,7 @@ export async function PATCH(req, context) {
       if (result.error) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
-      return NextResponse.json(result.value);
+      return NextResponse.json({ success: true, order: result.value });
     }
 
     const order = await Order.findById(id);
@@ -74,7 +83,7 @@ export async function PATCH(req, context) {
     order.status = status;
     await order.save();
 
-    return NextResponse.json(order);
+    return NextResponse.json({ success: true, order });
   } catch (error) {
     console.error("Order PATCH error:", error);
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
