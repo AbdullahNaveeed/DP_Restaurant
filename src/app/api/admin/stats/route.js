@@ -8,15 +8,20 @@ import { computeStatsFromOrders } from "@/services/admin/stats.service";
 
 // GET /api/admin/stats - Admin: get dashboard analytics
 export async function GET(req) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conn = await dbConnect();
+    let conn = null;
+    try {
+      conn = await dbConnect();
+    } catch (dbError) {
+      console.warn("Stats GET DB connect failed, using fallback:", dbError.message);
+      conn = null;
+    }
+
     const cacheKey = "admin:stats:v1";
     const cached = await cache.get(cacheKey);
     if (cached) {
@@ -24,10 +29,6 @@ export async function GET(req) {
     }
 
     if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
       const list = await readFallbackOrders();
       const result = computeStatsFromOrders(list);
       await cache.set(cacheKey, result, 15_000);

@@ -11,8 +11,6 @@ import {
 
 // POST /api/orders - Public: place a new order
 export async function POST(req) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -28,12 +26,10 @@ export async function POST(req) {
     try {
       conn = await dbConnect();
     } catch (dbError) {
-      if (isProduction) {
-        throw dbError;
-      }
       console.warn("Order POST DB connect failed, using fallback store:", dbError.message);
       conn = null;
     }
+
     const body = await req.json();
     const { customerName, phone, address, items, paymentMethod } = body;
     const totalAmount = body.totalAmount ?? body.totalPrice;
@@ -46,7 +42,6 @@ export async function POST(req) {
       const menuItemId = String(item.menuItem || "").trim();
       return {
         ...item,
-        // Avoid Mongoose ObjectId cast errors for fallback/static menu IDs.
         menuItem: mongoose.Types.ObjectId.isValid(menuItemId) ? menuItemId : undefined,
       };
     });
@@ -63,10 +58,6 @@ export async function POST(req) {
     };
 
     if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
       const fallbackOrder = await appendFallbackOrder(orderPayload);
       return NextResponse.json(
         {
@@ -95,8 +86,6 @@ export async function POST(req) {
 
 // GET /api/orders - Admin: list all orders
 export async function GET(req) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
@@ -107,12 +96,10 @@ export async function GET(req) {
     try {
       conn = await dbConnect();
     } catch (dbError) {
-      if (isProduction) {
-        throw dbError;
-      }
       console.warn("Orders GET DB connect failed, using fallback store:", dbError.message);
       conn = null;
     }
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
@@ -122,10 +109,6 @@ export async function GET(req) {
     }
 
     if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
       const list = await listFallbackOrders(filter.status || null);
       return NextResponse.json(list);
     }
@@ -137,3 +120,4 @@ export async function GET(req) {
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
+

@@ -26,7 +26,7 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'geolocation=(), microphone=()' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
           // Allow images from the configured remote patterns and data URIs
-          { key: 'Content-Security-Policy', value: "default-src 'self'; img-src * data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com;" },
+          { key: 'Content-Security-Policy', value: "default-src 'self'; connect-src 'self' https: wss:; img-src * data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com;" },
         ],
       },
     ];

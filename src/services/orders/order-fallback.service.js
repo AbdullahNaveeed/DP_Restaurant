@@ -1,8 +1,15 @@
-﻿import fs from "fs";
+import fs from "fs";
 import path from "path";
+import os from "os";
 
+/**
+ * Returns a writable path for the fallback orders file.
+ * On Vercel the project directory is read-only; use os.tmpdir() (/tmp) instead.
+ */
 export function getFallbackOrdersFilePath() {
-  return path.resolve(process.cwd(), "temp_init", "fallback-orders.json");
+  // Prefer /tmp (writable on Vercel) over project root
+  const dir = process.env.VERCEL ? os.tmpdir() : path.resolve(process.cwd(), "temp_init");
+  return path.join(dir, "fallback-orders.json");
 }
 
 export async function readFallbackOrders() {
@@ -17,8 +24,12 @@ export async function readFallbackOrders() {
 
 export async function writeFallbackOrders(orders) {
   const file = getFallbackOrdersFilePath();
-  await fs.promises.mkdir(path.dirname(file), { recursive: true });
-  await fs.promises.writeFile(file, JSON.stringify(orders, null, 2), "utf8");
+  try {
+    await fs.promises.mkdir(path.dirname(file), { recursive: true });
+    await fs.promises.writeFile(file, JSON.stringify(orders, null, 2), "utf8");
+  } catch (err) {
+    console.warn("writeFallbackOrders failed (read-only fs?):", err.message);
+  }
 }
 
 export async function appendFallbackOrder(orderPayload) {

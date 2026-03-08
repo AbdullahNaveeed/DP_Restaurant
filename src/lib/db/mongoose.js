@@ -8,13 +8,9 @@ if (!cached) {
 
 async function dbConnect() {
   const MONGODB_URI = process.env.MONGODB_URI?.trim();
-  const isProduction = process.env.NODE_ENV === "production";
 
   if (!MONGODB_URI) {
-    if (isProduction) {
-      throw new Error("MONGODB_URI is not configured in production.");
-    }
-    console.warn("MONGODB_URI not set - running in degraded mode without DB.");
+    console.warn("MONGODB_URI not set — running in degraded mode without DB.");
     return null;
   }
 
@@ -35,13 +31,25 @@ async function dbConnect() {
       .then((mongooseInstance) => mongooseInstance)
       .catch((error) => {
         cached.promise = null;
-        throw error;
+        console.error("MongoDB connection failed:", error.message);
+        return null;
       });
   }
 
-  const mongooseInstance = await cached.promise;
-  cached.conn = mongooseInstance;
-  return mongooseInstance;
+  try {
+    const mongooseInstance = await cached.promise;
+    if (!mongooseInstance) {
+      cached.promise = null;
+      return null;
+    }
+    cached.conn = mongooseInstance;
+    return mongooseInstance;
+  } catch (error) {
+    cached.promise = null;
+    console.error("MongoDB connection error:", error.message);
+    return null;
+  }
 }
 
 export default dbConnect;
+

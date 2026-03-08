@@ -1,4 +1,4 @@
-﻿import getRedisClient from "@/lib/redis/client";
+import getRedisClient from "@/lib/redis/client";
 
 // Simple in-memory TTL cache used as a fallback when Redis isn't configured.
 class TTLCache {
@@ -32,13 +32,23 @@ class TTLCache {
 
 const fallback = global.__APP_TTL_CACHE || (global.__APP_TTL_CACHE = new TTLCache());
 
-const redis = getRedisClient();
+// Lazy-load Redis: do NOT call getRedisClient() at module scope.
+// Eager initialization was crashing Vercel serverless functions and causing
+// all API routes to return 404.
+function redis() {
+  try {
+    return getRedisClient();
+  } catch {
+    return null;
+  }
+}
 
 const cache = {
   async get(key) {
-    if (redis) {
+    const r = redis();
+    if (r) {
       try {
-        const raw = await redis.get(key);
+        const raw = await r.get(key);
         if (raw == null) return null;
         return JSON.parse(raw);
       } catch (e) {
@@ -50,10 +60,11 @@ const cache = {
   },
 
   async set(key, value, ttlMs = 30_000) {
-    if (redis) {
+    const r = redis();
+    if (r) {
       try {
         const ttlSec = Math.max(1, Math.ceil(ttlMs / 1000));
-        await redis.set(key, JSON.stringify(value), "EX", ttlSec);
+        await r.set(key, JSON.stringify(value), "EX", ttlSec);
         return true;
       } catch (e) {
         console.error("cache: redis SET error:", e && e.message ? e.message : e);
@@ -66,9 +77,10 @@ const cache = {
   },
 
   async del(key) {
-    if (redis) {
+    const r = redis();
+    if (r) {
       try {
-        await redis.del(key);
+        await r.del(key);
         return true;
       } catch (e) {
         console.error("cache: redis DEL error:", e && e.message ? e.message : e);
@@ -81,9 +93,10 @@ const cache = {
   },
 
   async clear() {
-    if (redis) {
+    const r = redis();
+    if (r) {
       try {
-        await redis.flushdb();
+        await r.flushdb();
         return true;
       } catch (e) {
         console.error("cache: redis FLUSH error:", e && e.message ? e.message : e);
@@ -97,5 +110,3 @@ const cache = {
 };
 
 export default cache;
-
-

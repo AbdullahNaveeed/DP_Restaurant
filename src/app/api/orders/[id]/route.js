@@ -6,8 +6,6 @@ import { updateFallbackOrderStatus } from "@/services/orders/order-fallback.serv
 
 // PATCH /api/orders/[id] - Admin: update order status
 export async function PATCH(req, context) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
@@ -18,14 +16,13 @@ export async function PATCH(req, context) {
     try {
       conn = await dbConnect();
     } catch (dbError) {
-      if (isProduction) {
-        throw dbError;
-      }
       console.warn("Order PATCH DB connect failed, using fallback store:", dbError.message);
       conn = null;
     }
-    const params = context?.params ?? (await context)?.params ?? {};
-    let id = params.id;
+
+    // Next.js 15+: params may be a Promise
+    const resolvedContext = context?.params?.then ? { params: await context.params } : context;
+    let id = resolvedContext?.params?.id;
 
     if (!id) {
       try {
@@ -54,10 +51,6 @@ export async function PATCH(req, context) {
     };
 
     if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
       const result = await updateFallbackOrderStatus(id, status);
       if (result.error) {
         return NextResponse.json({ error: result.error }, { status: result.status });
@@ -89,3 +82,4 @@ export async function PATCH(req, context) {
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
   }
 }
+
