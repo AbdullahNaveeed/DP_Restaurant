@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">Food image placeholder</title>
+  <desc id="d">Fallback placeholder for menu item images.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#1f1f1f"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6c47a"/>
+      <stop offset="100%" stop-color="#b8922e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <g opacity="0.16" fill="#d4a853">
+    <circle cx="80" cy="80" r="28"/>
+    <circle cx="720" cy="520" r="40"/>
+    <circle cx="680" cy="100" r="20"/>
+  </g>
+  <g transform="translate(400 300)">
+    <ellipse cx="0" cy="30" rx="220" ry="52" fill="#111" opacity="0.45"/>
+    <ellipse cx="0" cy="0" rx="210" ry="72" fill="url(#plate)"/>
+    <ellipse cx="0" cy="-4" rx="182" ry="54" fill="#2a2a2a"/>
+    <path d="M-96 -2c24-32 52-30 78-8 23-18 48-16 68 8 28-26 58-24 86 0" fill="none" stroke="#d4a853" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>

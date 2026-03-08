@@ -1,0 +1,90 @@
+[
+  {
+    "_id": "fallback-1772956076235",
+    "customerName": "John Doe ",
+    "phone": "03258686199",
+    "address": "House jdsajiod",
+    "items": [
+      {
+        "menuItem": "fallback-starter-2::default::",
+        "name": "Seekh Kebab",
+        "price": 2657,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 2657,
+    "paymentMethod": "COD",
+    "status": "Delivered",
+    "createdAt": "2026-03-08T07:47:56.209Z"
+  },
+  {
+    "_id": "fallback-1771956125606",
+    "customerName": "Test User",
+    "phone": "555-1234",
+    "address": "123 Main St",
+    "items": [
+      {
+        "_id": "m1",
+        "name": "Sample",
+        "price": 9.99
+      }
+    ],
+    "totalAmount": 9.99,
+    "paymentMethod": "cash",
+    "status": "Delivered",
+    "createdAt": "2026-02-24T18:02:05.595Z"
+  },
+  {
+    "_id": "fallback-1771956105694",
+    "customerName": "Test User",
+    "phone": "555-1234",
+    "address": "123 Main St",
+    "items": [
+      {
+        "price": 9.99,
+        "name": "Sample",
+        "_id": "m1"
+      }
+    ],
+    "totalAmount": 9.99,
+    "paymentMethod": "cash",
+    "status": "Delivered",
+    "createdAt": "2026-02-24T18:01:45.665Z"
+  },
+  {
+    "_id": "fallback-1771829965738",
+    "customerName": "jkdn",
+    "phone": "cjksn",
+    "address": "njfn",
+    "items": [
+      {
+        "menuItem": "fallback-starter-2",
+        "name": "Seekh Kebab",
+        "price": 9.49,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 9.49,
+    "paymentMethod": "COD",
+    "status": "Pending",
+    "createdAt": "2026-02-23T06:59:25.738Z"
+  },
+  {
+    "_id": "fallback-1771829901215",
+    "customerName": "Test User",
+    "phone": "123",
+    "address": "123 Main",
+    "items": [
+      {
+        "menuItem": "fallback-main-1",
+        "price": 16.99,
+        "quantity": 1,
+        "name": "Chicken Karahi"
+      }
+    ],
+    "totalAmount": 16.99,
+    "paymentMethod": "COD",
+    "status": "Preparing",
+    "createdAt": "2026-02-23T06:58:21.215Z"
+  }
+]
