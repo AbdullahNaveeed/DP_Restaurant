@@ -1,4 +1,7 @@
-const { chromium } = require('playwright');
+﻿const { chromium } = require('playwright');
+const path = require('path');
+const fs = require('fs');
+
 
 (async () => {
   const url = process.env.URL || 'http://localhost:3000/menu/fallback-main-2';
@@ -20,9 +23,10 @@ const { chromium } = require('playwright');
     if (!found) {
       console.error('Add to Cart not found; dumping page for debug');
       const html = await page.content();
-      const fs = require('fs');
-      fs.writeFileSync('temp_ui_test_page.html', html);
-      await page.screenshot({ path: 'temp_ui_test_screenshot.png', fullPage: true });
+      fs.mkdirSync(path.join('dev','html-prototypes'), { recursive: true });
+      
+      fs.writeFileSync('dev/html-prototypes/ui-test-page.html', html);
+      await page.screenshot({ path: 'dev/html-prototypes/ui-test-screenshot.png', fullPage: true });
       throw new Error('Add to Cart button missing after wait');
     }
     console.log('Add to Cart button found');
@@ -91,3 +95,5 @@ const { chromium } = require('playwright');
     await browser.close();
   }
 })();
+
+
