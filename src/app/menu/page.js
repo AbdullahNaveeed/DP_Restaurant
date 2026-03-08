@@ -1,7 +1,7 @@
-import dbConnect from "@/lib/db";
+import dbConnect from "@/lib/db/mongoose";
 import MenuItem from "@/models/MenuItem";
-import DEFAULT_MENU from "@/lib/defaultMenu";
-import MenuClient from "@/components/MenuClient";
+import DEFAULT_MENU from "@/features/menu/data/default-menu";
+import MenuClient from "@/features/menu/components/MenuClient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default async function Page({ searchParams }) {
@@ -28,7 +28,7 @@ export default async function Page({ searchParams }) {
   }
 
   // Server-side category filter fallback: if ?category=... is provided, filter items
-  // `searchParams` may be a Promise in some Next.js dev/runtime modes — resolve safely.
+  // `searchParams` may be a Promise in some Next.js dev/runtime modes â€” resolve safely.
   const resolvedSearchParams =
     searchParams && typeof searchParams.then === "function" ? await searchParams : searchParams || {};
   const requestedCategory = String(resolvedSearchParams.category || "").trim();
@@ -51,3 +51,4 @@ export default async function Page({ searchParams }) {
     </ErrorBoundary>
   );
 }
+

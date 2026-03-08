@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db";
+import dbConnect from "@/lib/db/mongoose";
 import User from "@/models/User";
-import { comparePassword, signToken } from "@/lib/auth";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { comparePassword, signToken } from "@/lib/auth/jwt";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(req) {
     try {
@@ -88,3 +88,4 @@ export async function POST(req) {
         );
     }
 }
+

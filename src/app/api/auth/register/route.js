@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db";
+import dbConnect from "@/lib/db/mongoose";
 import User from "@/models/User";
-import { hashPassword, signToken } from "@/lib/auth";
+import { hashPassword, signToken } from "@/lib/auth/jwt";
 
 export async function POST(req) {
     try {
@@ -73,3 +73,4 @@ export async function POST(req) {
         );
     }
 }
+

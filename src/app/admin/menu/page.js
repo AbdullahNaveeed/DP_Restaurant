@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { HiPencil, HiPlus, HiTrash, HiX } from "react-icons/hi";
-import { apiRequest } from "@/lib/api";
-import { FALLBACK_MENU_IMAGE } from "@/lib/menuImage";
-import MenuItemImage from "@/components/MenuItemImage";
+import { apiRequest } from "@/lib/http/api-client";
+import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
+import MenuItemImage from "@/features/menu/components/MenuItemImage";
 
 const CATEGORIES = ["Starters", "Main Course", "Desserts", "Drinks", "Specials"];
 
@@ -304,3 +304,4 @@ export default function AdminMenuPage() {
     </div>
   );
 }
+

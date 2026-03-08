@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { formatPKR } from "@/lib/price";
+import { formatPKR } from "@/utils/price";
 import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
 import { HiCash, HiCreditCard } from "react-icons/hi";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { formatPKR } from "@/lib/price";
+import { formatPKR } from "@/utils/price";
 import { useCart } from "@/context/CartContext";
 import { HiMinus, HiPlus, HiTrash } from "react-icons/hi";
 

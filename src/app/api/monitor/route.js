@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-import getRedisClient from "@/lib/redisClient";
+﻿import { NextResponse } from "next/server";
+import getRedisClient from "@/lib/redis/client";
 
-// GET /api/monitor — exposes lightweight runtime metrics (JSON)
+// GET /api/monitor â€” exposes lightweight runtime metrics (JSON)
 export async function GET() {
   try {
     const metrics = {
@@ -27,3 +27,4 @@ export async function GET() {
     return NextResponse.json({ error: "failed" }, { status: 500 });
   }
 }
+

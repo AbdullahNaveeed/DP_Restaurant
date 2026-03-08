@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import { FALLBACK_MENU_IMAGE } from "@/lib/menuImage";
+﻿import mongoose from "mongoose";
+import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
 
 const MenuItemSchema = new mongoose.Schema(
     {
@@ -77,3 +77,4 @@ const MenuItemSchema = new mongoose.Schema(
 MenuItemSchema.index({ category: 1, name: 1 });
 
 export default mongoose.models.MenuItem || mongoose.model("MenuItem", MenuItemSchema);
+

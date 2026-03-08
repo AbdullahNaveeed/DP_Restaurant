@@ -1,9 +1,9 @@
 import Link from "next/link";
-import MenuDetailClientLoader from "@/components/MenuDetailClientLoader";
-import dbConnect from "@/lib/db";
+import MenuDetailClientLoader from "@/features/menu/components/MenuDetailClientLoader";
+import dbConnect from "@/lib/db/mongoose";
 import MenuItem from "@/models/MenuItem";
-import DEFAULT_MENU from "@/lib/defaultMenu";
-import { FALLBACK_MENU_IMAGE } from "@/lib/menuImage";
+import DEFAULT_MENU from "@/features/menu/data/default-menu";
+import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
 
 export default async function Page({ params }) {
   // `params` may be a Promise in some Next.js runtimes — resolve safely.

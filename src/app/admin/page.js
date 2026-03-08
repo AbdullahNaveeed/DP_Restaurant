@@ -7,7 +7,7 @@ import {
   HiOutlineCurrencyDollar,
   HiOutlineShoppingCart,
 } from "react-icons/hi";
-import { formatPKR } from "@/lib/price";
+import { formatPKR } from "@/utils/price";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);

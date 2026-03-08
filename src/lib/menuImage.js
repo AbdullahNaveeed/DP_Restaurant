@@ -1,1 +1,1 @@
-export const FALLBACK_MENU_IMAGE = "/images/menu-fallback.svg";
+﻿export { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
