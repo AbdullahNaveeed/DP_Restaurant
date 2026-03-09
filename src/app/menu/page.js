@@ -1,35 +1,30 @@
-import dbConnect from "@/lib/db/mongoose";
-import MenuItem from "@/models/MenuItem";
-import DEFAULT_MENU from "@/features/menu/data/default-menu";
+import { supabase } from "@/lib/db/supabase";
 import MenuClient from "@/features/menu/components/MenuClient";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default async function Page({ searchParams }) {
-  let conn = null;
-  try {
-    conn = await dbConnect();
-  } catch (e) {
-    console.error("Menu page DB connect failed:", e);
-    conn = null;
-  }
-
   let items = [];
   try {
-    if (conn) {
-      const dbItems = await MenuItem.find({ isAvailable: true })
-        .select("name description price category imageURL imageURLs isAvailable variants options _id")
-        .sort({ category: 1, name: 1 })
-        .lean();
+    const { data: dbItems, error } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("is_available", true)
+      .order("category")
+      .order("name");
 
-      items = dbItems.map((it) => ({ ...it, _id: String(it._id) }));
+    if (error) {
+      console.error("Menu list Supabase failed:", error);
+    } else if (dbItems) {
+      items = dbItems.map((it) => ({
+        ...it,
+        _id: String(it.id),
+        imageURL: it.image_url,
+        imageURLs: it.image_urls,
+        isAvailable: it.is_available,
+      }));
     }
   } catch (e) {
-    console.error("Menu list DB failed:", e);
-    items = [];
-  }
-
-  if (!items || items.length === 0) {
-    items = DEFAULT_MENU.filter((m) => m.isAvailable).map((m) => ({ ...m }));
+    console.error("Menu list Supabase exception:", e);
   }
 
   // Server-side category filter fallback: if ?category=... is provided, filter items

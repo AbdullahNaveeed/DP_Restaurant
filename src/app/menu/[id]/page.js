@@ -1,9 +1,7 @@
 import Link from "next/link";
 import MenuDetailClientLoader from "@/features/menu/components/MenuDetailClientLoader";
-import dbConnect from "@/lib/db/mongoose";
-import MenuItem from "@/models/MenuItem";
-import DEFAULT_MENU from "@/features/menu/data/default-menu";
 import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
+import { supabase } from "@/lib/db/supabase";
 
 export default async function Page({ params }) {
   // `params` may be a Promise in some Next.js runtimes — resolve safely.
@@ -13,49 +11,27 @@ export default async function Page({ params }) {
   let payload = null;
   try {
     if (id) {
-      let conn = null;
-      try {
-        conn = await dbConnect();
-      } catch (err) {
-        console.error("Menu item page DB connect failed:", err);
-        conn = null;
-      }
+      const { data: item, error } = await supabase
+        .from("menu_items")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-      if (conn) {
-        const item = await MenuItem.findById(id).lean();
-        if (item) {
-          payload = {
-            _id: String(item._id),
+      if (error) {
+        console.error("Menu item page Supabase error:", error);
+      } else if (item) {
+        payload = {
+            _id: String(item.id),
             name: item.name,
             description: item.description,
             price: item.price,
             category: item.category,
-              imageURL: item.imageURL || FALLBACK_MENU_IMAGE,
-              imageURLs: Array.isArray(item.imageURLs) && item.imageURLs.length ? item.imageURLs : [item.imageURL || FALLBACK_MENU_IMAGE],
+            imageURL: item.image_url || FALLBACK_MENU_IMAGE,
+            imageURLs: Array.isArray(item.image_urls) && item.image_urls.length ? item.image_urls : [item.image_url || FALLBACK_MENU_IMAGE],
             variants: Array.isArray(item.variants) ? item.variants : [],
             options: Array.isArray(item.options) ? item.options : [],
-            isAvailable: Boolean(item.isAvailable),
-          };
-        }
-      }
-
-      // Fallback to bundled data when DB missing or item not found
-      if (!payload) {
-        const found = DEFAULT_MENU.find((m) => String(m._id) === String(id));
-        if (found) {
-          payload = {
-            _id: String(found._id),
-            name: found.name,
-            description: found.description,
-            price: found.price,
-            category: found.category,
-            imageURL: found.imageURL || FALLBACK_MENU_IMAGE,
-            imageURLs: Array.isArray(found.imageURLs) && found.imageURLs.length ? found.imageURLs : [found.imageURL || FALLBACK_MENU_IMAGE],
-            variants: Array.isArray(found.variants) ? found.variants : [],
-            options: Array.isArray(found.options) ? found.options : [],
-            isAvailable: Boolean(found.isAvailable),
-          };
-        }
+            isAvailable: Boolean(item.is_available),
+        };
       }
     }
   } catch (e) {

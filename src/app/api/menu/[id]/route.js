@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db/mongoose";
-import MenuItem from "@/models/MenuItem";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
 import cache from "@/lib/cache";
+import { supabase } from "@/lib/db/supabase";
 import {
-  getFallbackMenuItemById,
   toPublicMenuPayload,
   buildMenuCacheKeys,
 } from "@/services/menu/menu.service";
@@ -15,49 +13,43 @@ async function invalidateMenuCache() {
   await Promise.all(keys.map((key) => cache.del(key)));
 }
 
-// GET /api/menu/[id] - Public: fetch one item from DB or fallback menu
+// GET /api/menu/[id] - Public: fetch one item from DB
 export async function GET(req, context) {
-  const isProduction = process.env.NODE_ENV === "production";
-
   try {
-    const { params } = await context;
-    const idFromContext = params?.id;
-    const url = new URL(req.url);
-    const idFromPath = String(url.pathname).split("/").filter(Boolean).pop();
-    const id = idFromContext || idFromPath;
+    const resolvedParams =
+      context?.params && typeof context.params.then === "function"
+        ? await context.params
+        : context?.params || {};
+    let id = resolvedParams?.id;
+
+    if (!id) {
+      const url = new URL(req.url);
+      id = String(url.pathname).split("/").filter(Boolean).pop();
+    }
 
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    const conn = await dbConnect();
+    const { data: item, error } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    if (!conn) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-      }
-
-      const fallback = getFallbackMenuItemById(id);
-      if (!fallback) {
-        return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
-      }
-      return NextResponse.json(fallback, { status: 200 });
+    if (error || !item) {
+      return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
-    const item = await MenuItem.findById(id).lean();
-    if (!item) {
-      if (isProduction) {
-        return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
-      }
+    const formattedItem = {
+      ...item,
+      _id: item.id,
+      imageURL: item.image_url,
+      imageURLs: item.image_urls,
+      isAvailable: item.is_available,
+    };
 
-      const fallback = getFallbackMenuItemById(id);
-      if (!fallback) {
-        return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
-      }
-      return NextResponse.json(fallback, { status: 200 });
-    }
-
-    return NextResponse.json(toPublicMenuPayload([item])[0], { status: 200 });
+    return NextResponse.json(toPublicMenuPayload([formattedItem])[0], { status: 200 });
   } catch (error) {
     console.error("Menu [id] GET error:", error);
     return NextResponse.json({ error: "Failed to load menu item" }, { status: 500 });
@@ -72,13 +64,17 @@ export async function PUT(req, context) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conn = await dbConnect();
-    if (!conn) {
-      return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
-    }
+    const resolvedParams =
+      context?.params && typeof context.params.then === "function"
+        ? await context.params
+        : context?.params || {};
+    let id = resolvedParams?.id;
 
-    const { params } = await context;
-    const { id } = params;
+    if (!id) {
+      const url = new URL(req.url);
+      const parts = String(url.pathname).split("/").filter(Boolean);
+      id = parts[parts.length - 1]; // e.g. /api/menu/123 -> 123
+    }
     const body = await req.json();
     const normalizedImageURL = String(body.imageURL || "").trim() || FALLBACK_MENU_IMAGE;
     const normalizedImageURLs =
@@ -86,40 +82,41 @@ export async function PUT(req, context) {
         ? body.imageURLs
         : [normalizedImageURL];
 
-    // Extract only editable fields — spreading raw body passes _id, __v,
-    // createdAt etc. which causes Mongoose CastError / immutable-field errors.
     const updateData = {};
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
-    if (body.price !== undefined) updateData.price = body.price;
+    if (body.price !== undefined) updateData.price = Number(body.price);
     if (body.category !== undefined) updateData.category = body.category;
-    if (body.isAvailable !== undefined) updateData.isAvailable = body.isAvailable;
+    if (body.isAvailable !== undefined) updateData.is_available = body.isAvailable;
     if (body.variants !== undefined) updateData.variants = body.variants;
     if (body.options !== undefined) updateData.options = body.options;
-    updateData.imageURL = normalizedImageURL;
-    updateData.imageURLs = normalizedImageURLs;
+    updateData.image_url = normalizedImageURL;
+    updateData.image_urls = normalizedImageURLs;
 
-    const item = await MenuItem.findByIdAndUpdate(
-      id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    const { data: item, error } = await supabase
+      .from("menu_items")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
 
-    if (!item) {
+    if (error || !item) {
       return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 
     await invalidateMenuCache();
 
-    return NextResponse.json(item);
+    const formattedItem = {
+      ...item,
+      _id: item.id,
+      imageURL: item.image_url,
+      imageURLs: item.image_urls,
+      isAvailable: item.is_available,
+    };
+
+    return NextResponse.json(formattedItem);
   } catch (error) {
     console.error("Menu PUT error:", error);
-    if (error.name === "ValidationError") {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
     return NextResponse.json({ error: "Failed to update menu item" }, { status: 500 });
   }
 }
@@ -132,16 +129,24 @@ export async function DELETE(req, context) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const conn = await dbConnect();
-    if (!conn) {
-      return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
+    const resolvedParams =
+      context?.params && typeof context.params.then === "function"
+        ? await context.params
+        : context?.params || {};
+    let id = resolvedParams?.id;
+
+    if (!id) {
+      const url = new URL(req.url);
+      const parts = String(url.pathname).split("/").filter(Boolean);
+      id = parts[parts.length - 1]; // e.g. /api/menu/123 -> 123
     }
 
-    const { params } = await context;
-    const { id } = params;
+    const { error } = await supabase
+      .from("menu_items")
+      .delete()
+      .eq("id", id);
 
-    const item = await MenuItem.findByIdAndDelete(id);
-    if (!item) {
+    if (error) {
       return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
     }
 

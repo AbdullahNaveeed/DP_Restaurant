@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db/mongoose";
-import MenuItem from "@/models/MenuItem";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { FALLBACK_MENU_IMAGE } from "@/features/menu/constants/images";
 import cache from "@/lib/cache";
+import { supabase } from "@/lib/db/supabase";
 import {
   normalizeCategory,
-  filterFallbackMenu,
   toPublicMenuPayload,
   buildMenuCacheKeys,
 } from "@/services/menu/menu.service";
@@ -24,22 +22,7 @@ export async function GET(req) {
     const showAll = searchParams.get("all") === "true";
     const cacheKey = `menu:category=${category || "all"}:showAll=${showAll}`;
 
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch (dbError) {
-      console.warn("Menu GET DB connect failed, using fallback menu:", dbError.message);
-      conn = null;
-    }
-
-    if (!conn) {
-      const payload = filterFallbackMenu(category, showAll);
-      await cache.set(cacheKey, payload, 30_000);
-      return NextResponse.json(payload, {
-        headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" },
-      });
-    }
-
+    // Try cache first
     const cached = await cache.get(cacheKey);
     if (cached) {
       return NextResponse.json(cached, {
@@ -47,28 +30,38 @@ export async function GET(req) {
       });
     }
 
-    const filter = showAll ? {} : { isAvailable: true };
-    if (category) filter.category = category;
+    let query = supabase.from("menu_items").select("*");
+    
+    if (!showAll) {
+      query = query.eq("is_available", true);
+    }
+    if (category) {
+      query = query.eq("category", category);
+    }
 
-    const items = await MenuItem.find(filter)
-      .select("name description price category imageURL imageURLs isAvailable variants options")
-      .sort({ category: 1, name: 1 })
-      .lean();
+    const { data: items, error } = await query.order('category').order('name');
+    
+    if (error) {
+      throw error;
+    }
 
-    const payload = toPublicMenuPayload(items);
+    // Map snake_case to camelCase
+    const formattedItems = items.map(item => ({
+      ...item,
+      _id: item.id,
+      imageURL: item.image_url,
+      imageURLs: item.image_urls,
+      isAvailable: item.is_available,
+    }));
+
+    const payload = toPublicMenuPayload(formattedItems);
     await cache.set(cacheKey, payload, 30_000);
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" },
     });
   } catch (error) {
     console.error("Menu GET error:", error);
-
-    const { searchParams } = new URL(req.url);
-    const category = normalizeCategory(searchParams.get("category"));
-    const showAll = searchParams.get("all") === "true";
-    return NextResponse.json(filterFallbackMenu(category, showAll), {
-      headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" },
-    });
+    return NextResponse.json({ error: "Failed to fetch menu items" }, { status: 500 });
   }
 }
 
@@ -78,11 +71,6 @@ export async function POST(req) {
     const admin = await getAdminFromRequest(req);
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const conn = await dbConnect();
-    if (!conn) {
-      return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
     }
 
     const body = await req.json();
@@ -109,21 +97,40 @@ export async function POST(req) {
       );
     }
 
-    const item = await MenuItem.create({
+    const insertPayload = {
       name,
       description,
-      price,
+      price: Number(price),
       category,
-      imageURL: normalizedImageURL,
-      imageURLs: normalizedImageURLs,
-      isAvailable: isAvailable !== false,
+      image_url: normalizedImageURL,
+      image_urls: normalizedImageURLs,
+      is_available: isAvailable !== false,
       variants: Array.isArray(variants) ? variants : [],
       options: Array.isArray(options) ? options : [],
-    });
+    };
+
+    const { data: item, error } = await supabase
+      .from("menu_items")
+      .insert([insertPayload])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
 
     await invalidateMenuCache();
 
-    return NextResponse.json(item, { status: 201 });
+    // Format for frontend
+    const formattedItem = {
+      ...item,
+      _id: item.id,
+      imageURL: item.image_url,
+      imageURLs: item.image_urls,
+      isAvailable: item.is_available,
+    };
+
+    return NextResponse.json(formattedItem, { status: 201 });
   } catch (error) {
     console.error("Menu POST error:", error);
     return NextResponse.json({ error: "Failed to create menu item" }, { status: 500 });
