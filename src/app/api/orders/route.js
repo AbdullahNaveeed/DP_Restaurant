@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import dbConnect from "@/lib/db/mongoose";
-import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import {
-  appendFallbackOrder,
-  listFallbackOrders,
-} from "@/services/orders/order-fallback.service";
+import { supabase } from "@/lib/db/supabase"; 
 
 // POST /api/orders - Public: place a new order
 export async function POST(req) {
@@ -22,59 +16,47 @@ export async function POST(req) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch (dbError) {
-      console.warn("Order POST DB connect failed, using fallback store:", dbError.message);
-      conn = null;
-    }
-
     const body = await req.json();
-    const { customerName, phone, address, items, paymentMethod } = body;
+    const { customerName, phone, address, items, paymentMethod, userId } = body;
     const totalAmount = body.totalAmount ?? body.totalPrice;
 
     if (!customerName || !phone || !address || !items?.length || totalAmount == null || !paymentMethod) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
-    const normalizedItems = items.map((item) => {
-      const menuItemId = String(item.menuItem || "").trim();
-      return {
-        ...item,
-        menuItem: mongoose.Types.ObjectId.isValid(menuItemId) ? menuItemId : undefined,
-      };
-    });
-
     const orderPayload = {
-      customerName,
+      user_id: userId || null,
+      customer_name: customerName,
       phone,
       address,
-      items: normalizedItems,
-      totalAmount,
-      paymentMethod,
+      items: items.map((item) => ({
+        menuItem: item.menuItem,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      total_amount: Number(totalAmount),
+      payment_method: paymentMethod,
       status: "Pending",
-      createdAt: new Date().toISOString(),
     };
 
-    if (!conn) {
-      const fallbackOrder = await appendFallbackOrder(orderPayload);
-      return NextResponse.json(
-        {
-          success: true,
-          orderId: String(fallbackOrder._id),
-          ...fallbackOrder,
-        },
-        { status: 201 }
-      );
+    const { data: order, error: insertError } = await supabase
+      .from("orders")
+      .insert([orderPayload])
+      .select()
+      .single();
+
+    if (insertError) {
+       console.error("Supabase Insert Error:", insertError);
+       throw new Error(insertError.message);
     }
 
-    const order = await Order.create(orderPayload);
     return NextResponse.json(
       {
         success: true,
-        orderId: String(order._id),
-        ...order.toObject(),
+        orderId: order.id,
+        _id: order.id, // For backwards compatibility with frontend
+        ...order,
       },
       { status: 201 }
     );
@@ -92,29 +74,33 @@ export async function GET(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch (dbError) {
-      console.warn("Orders GET DB connect failed, using fallback store:", dbError.message);
-      conn = null;
-    }
-
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
-    const filter = {};
+    let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
+    
     if (status && status !== "All") {
-      filter.status = status;
+      query = query.eq("status", status);
     }
 
-    if (!conn) {
-      const list = await listFallbackOrders(filter.status || null);
-      return NextResponse.json(list);
+    const { data: orders, error } = await query;
+
+    if (error) {
+       throw error;
     }
 
-    const orders = await Order.find(filter).sort({ createdAt: -1 });
-    return NextResponse.json(orders);
+    // Map Postgres columns to expected frontend properties for backwards compatibility
+    const formattedOrders = orders.map((o) => ({
+       ...o,
+       _id: o.id,
+       userId: o.user_id,
+       customerName: o.customer_name,
+       totalAmount: o.total_amount,
+       paymentMethod: o.payment_method,
+       createdAt: o.created_at,
+    }));
+
+    return NextResponse.json(formattedOrders);
   } catch (error) {
     console.error("Orders GET error:", error);
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { formatPKR } from "@/utils/price";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/app/auth/auth-context";
 import toast from "react-hot-toast";
 import { HiCash, HiCreditCard } from "react-icons/hi";
 
@@ -28,11 +29,12 @@ const PAYMENT_METHODS = [
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalAmount, clearCart } = useCart();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [form, setForm] = useState({
-    customerName: "",
-    phone: "",
+    customerName: user?.user_metadata?.full_name || "",
+    phone: user?.user_metadata?.phone || "",
     address: "",
   });
 
@@ -60,6 +62,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          userId: user?.id || null, // Send user ID if authenticated
           customerName: form.customerName,
           phone: form.phone,
           address: form.address,

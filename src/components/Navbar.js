@@ -82,13 +82,18 @@ export default function Navbar() {
               </Link>
             ))}
             {user ? (
-               <Link
-                 href="/profile"
-                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-elevated/60 hover:text-accent-gold lg:px-4"
-               >
-                 <HiOutlineUser size={18} />
-                 Profile
-               </Link>
+               <>
+                 <Link href="/orders" className={navLinkClass("/orders")}>
+                   Orders
+                 </Link>
+                 <Link
+                   href="/profile"
+                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-elevated/60 hover:text-accent-gold lg:px-4"
+                 >
+                   <HiOutlineUser size={18} />
+                   Profile
+                 </Link>
+               </>
             ) : (
               <>
                 <Link href="/auth/login" className={navLinkClass("/auth/login")}>
@@ -177,14 +182,23 @@ export default function Navbar() {
 
         <div className="border-t border-border-color p-4 space-y-3">
           {user ? (
-            <Link
-               href="/profile"
-               onClick={() => setMenuOpen(false)}
-               className="btn-secondary flex w-full items-center justify-center gap-2 rounded-lg"
-            >
-              <HiOutlineUser size={18} />
-              Profile
-            </Link>
+            <>
+              <Link
+                href="/orders"
+                onClick={() => setMenuOpen(false)}
+                className="btn-secondary w-full rounded-lg text-center font-medium mb-3"
+              >
+                My Orders
+              </Link>
+              <Link
+                 href="/profile"
+                 onClick={() => setMenuOpen(false)}
+                 className="btn-secondary flex w-full items-center justify-center gap-2 rounded-lg"
+              >
+                <HiOutlineUser size={18} />
+                Profile
+              </Link>
+            </>
           ) : (
             <div className="flex flex-col gap-2">
               <Link

@@ -3,12 +3,14 @@
 import { Toaster } from "react-hot-toast";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/app/auth/auth-context";
+import OrderNotifier from "@/components/OrderNotifier";
 
 export default function Providers({ children }) {
     return (
         <AuthProvider>
             <CartProvider>
                 {children}
+            <OrderNotifier />
             <Toaster
                 position="top-right"
                 toastOptions={{

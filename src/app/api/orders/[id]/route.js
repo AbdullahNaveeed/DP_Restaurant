@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db/mongoose";
-import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import { updateFallbackOrderStatus } from "@/services/orders/order-fallback.service";
+import { supabase } from "@/lib/db/supabase";
 
 // PATCH /api/orders/[id] - Admin: update order status
 export async function PATCH(req, context) {
@@ -12,12 +11,8 @@ export async function PATCH(req, context) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch (dbError) {
-      console.warn("Order PATCH DB connect failed, using fallback store:", dbError.message);
-      conn = null;
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Next.js 15+: params may be a Promise
@@ -36,6 +31,7 @@ export async function PATCH(req, context) {
 
     if (Array.isArray(id)) id = id.join("/");
     id = decodeURIComponent(String(id)).trim();
+    
     const { status } = await req.json();
 
     if (!["Pending", "Preparing", "Delivered"].includes(status)) {
@@ -44,22 +40,19 @@ export async function PATCH(req, context) {
         { status: 400 }
       );
     }
-
+    
     const NEXT = {
       Pending: "Preparing",
       Preparing: "Delivered",
     };
 
-    if (!conn) {
-      const result = await updateFallbackOrderStatus(id, status);
-      if (result.error) {
-        return NextResponse.json({ error: result.error }, { status: result.status });
-      }
-      return NextResponse.json({ success: true, order: result.value });
-    }
+    const { data: order, error: fetchError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    const order = await Order.findById(id);
-    if (!order) {
+    if (fetchError || !order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -73,10 +66,42 @@ export async function PATCH(req, context) {
       return NextResponse.json({ error: "Invalid status transition" }, { status: 400 });
     }
 
-    order.status = status;
-    await order.save();
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", id)
+      .select()
+      .single();
 
-    return NextResponse.json({ success: true, order });
+    if (updateError) {
+       throw updateError;
+    }
+
+    // Broadcast Realtime update to the specific user if they are registered
+    if (updatedOrder.user_id) {
+       await supabase.channel("order-updates").send({
+         type: "broadcast",
+         event: "order-status-changed",
+         payload: {
+           userId: updatedOrder.user_id,
+           orderId: updatedOrder.id,
+           status: updatedOrder.status,
+         },
+       });
+    }
+
+    // Map column names back to expected frontend keys for backwards compatibility
+    const formattedOrder = {
+       ...updatedOrder,
+       _id: updatedOrder.id,
+       userId: updatedOrder.user_id,
+       customerName: updatedOrder.customer_name,
+       totalAmount: updatedOrder.total_amount,
+       paymentMethod: updatedOrder.payment_method,
+       createdAt: updatedOrder.created_at,
+    };
+
+    return NextResponse.json({ success: true, order: formattedOrder });
   } catch (error) {
     console.error("Order PATCH error:", error);
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });

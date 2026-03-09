@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db/mongoose";
-import Order from "@/models/Order";
-import {
-  readFallbackOrders,
-} from "@/services/orders/order-fallback.service";
+import { supabase } from "@/lib/db/supabase";
 
 // GET /api/orders/[id]/status — Public: check order status (no admin auth)
 export async function GET(req, context) {
@@ -31,53 +27,23 @@ export async function GET(req, context) {
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 });
     }
 
-    // Try database first
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch {
-      conn = null;
+    // Fetch from Supabase
+    const { data: order, error: fetchError } = await supabase
+      .from("orders")
+      .select("id, status, customer_name, created_at")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !order) {
+       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    if (conn) {
-      try {
-        const order = await Order.findById(id)
-          .select("status customerName createdAt")
-          .lean();
-
-        if (order) {
-          return NextResponse.json({
-            orderId: String(order._id),
-            status: order.status,
-            customerName: order.customerName,
-            createdAt: order.createdAt,
-          });
-        }
-      } catch {
-        // ID may not be a valid ObjectId — fall through to fallback
-      }
-    }
-
-    // Try fallback store
-    try {
-      const fallbackOrders = await readFallbackOrders();
-      const found = fallbackOrders.find(
-        (o) => String(o._id).trim() === id || String(o._id).includes(id)
-      );
-
-      if (found) {
-        return NextResponse.json({
-          orderId: String(found._id),
-          status: found.status,
-          customerName: found.customerName,
-          createdAt: found.createdAt,
-        });
-      }
-    } catch {
-      // ignore fallback errors
-    }
-
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    return NextResponse.json({
+      orderId: order.id,
+      status: order.status,
+      customerName: order.customer_name,
+      createdAt: order.created_at,
+    });
   } catch (error) {
     console.error("Order status GET error:", error);
     return NextResponse.json({ error: "Failed to get order status" }, { status: 500 });

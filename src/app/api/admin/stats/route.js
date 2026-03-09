@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db/mongoose";
-import Order from "@/models/Order";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
 import cache from "@/lib/cache";
-import { readFallbackOrders } from "@/services/orders/order-fallback.service";
-import { computeStatsFromOrders } from "@/services/admin/stats.service";
+import { supabase } from "@/lib/db/supabase";
 
 // GET /api/admin/stats - Admin: get dashboard analytics
 export async function GET(req) {
@@ -14,44 +11,40 @@ export async function GET(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let conn = null;
-    try {
-      conn = await dbConnect();
-    } catch (dbError) {
-      console.warn("Stats GET DB connect failed, using fallback:", dbError.message);
-      conn = null;
+    const { data: allOrders, error } = await supabase
+      .from("orders")
+      .select("id, status, total_amount, customer_name, created_at, payment_method, user_id")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+       throw error;
     }
 
-    const cacheKey = "admin:stats:v1";
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return NextResponse.json(cached);
-    }
-
-    if (!conn) {
-      const list = await readFallbackOrders();
-      const result = computeStatsFromOrders(list);
-      await cache.set(cacheKey, result, 15_000);
-      return NextResponse.json(result);
-    }
-
-    const [totalOrders, totalRevenue, statusBreakdown, recentOrders] = await Promise.all([
-      Order.countDocuments(),
-      Order.aggregate([{ $group: { _id: null, total: { $sum: "$totalAmount" } } }]),
-      Order.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-      Order.find().sort({ createdAt: -1 }).limit(5),
-    ]);
-
+    const totalOrders = allOrders.length;
+    let totalRevenue = 0;
     const statusCounts = { Pending: 0, Preparing: 0, Delivered: 0 };
-    statusBreakdown.forEach((item) => {
-      if (Object.prototype.hasOwnProperty.call(statusCounts, item._id)) {
-        statusCounts[item._id] = item.count;
+    
+    allOrders.forEach((o) => {
+      totalRevenue += Number(o.total_amount) || 0;
+      if (statusCounts[o.status] !== undefined) {
+        statusCounts[o.status]++;
       }
     });
 
+    const recentOrdersRaw = allOrders.slice(0, 5);
+    const recentOrders = recentOrdersRaw.map((o) => ({
+       ...o,
+       _id: o.id,
+       userId: o.user_id,
+       customerName: o.customer_name,
+       totalAmount: o.total_amount,
+       paymentMethod: o.payment_method,
+       createdAt: o.created_at,
+    }));
+
     const result = {
       totalOrders,
-      totalRevenue: totalRevenue[0]?.total || 0,
+      totalRevenue,
       statusCounts,
       recentOrders,
     };
