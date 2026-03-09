@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAdminFromRequest } from "@/lib/auth/jwt";
-import cache from "@/lib/cache";
 import { supabase } from "@/lib/db/supabase";
 
 // GET /api/admin/stats - Admin: get dashboard analytics
@@ -49,7 +48,6 @@ export async function GET(req) {
       recentOrders,
     };
 
-    await cache.set(cacheKey, result, 15_000);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Stats GET error:", error);

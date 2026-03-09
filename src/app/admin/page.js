@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -8,22 +8,39 @@ import {
   HiOutlineShoppingCart,
 } from "react-icons/hi";
 import { formatPKR } from "@/utils/price";
+import { supabase } from "@/lib/db/supabase";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/admin/stats");
+      if (res.ok) setStats(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/admin/stats");
-        if (res.ok) setStats(await res.json());
-      } catch (err) {
-        console.error("Failed to fetch stats:", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchStats().finally(() => setLoading(false));
+
+    const channel = supabase
+      .channel("admin-dashboard-stats")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        (payload) => {
+          console.log("Real-time order change detected:", payload);
+          fetchStats(); // Refresh dashboard on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
