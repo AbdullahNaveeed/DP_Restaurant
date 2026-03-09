@@ -2,11 +2,13 @@
 
 import { Toaster } from "react-hot-toast";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/app/auth/auth-context";
 
 export default function Providers({ children }) {
     return (
-        <CartProvider>
-            {children}
+        <AuthProvider>
+            <CartProvider>
+                {children}
             <Toaster
                 position="top-right"
                 toastOptions={{
@@ -24,6 +26,7 @@ export default function Providers({ children }) {
                     },
                 }}
             />
-        </CartProvider>
+            </CartProvider>
+        </AuthProvider>
     );
 }

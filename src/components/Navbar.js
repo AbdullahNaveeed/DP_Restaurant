@@ -1,12 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/app/auth/auth-context";
 import {
   HiOutlineMenuAlt3,
   HiOutlineShoppingBag,
+  HiOutlineUser,
   HiX,
 } from "react-icons/hi";
 
@@ -19,6 +21,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const { items } = useCart();
+  const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -78,6 +81,24 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {user ? (
+               <Link
+                 href="/profile"
+                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-elevated/60 hover:text-accent-gold lg:px-4"
+               >
+                 <HiOutlineUser size={18} />
+                 Profile
+               </Link>
+            ) : (
+              <>
+                <Link href="/auth/login" className={navLinkClass("/auth/login")}>
+                  Login
+                </Link>
+                <Link href="/auth/signup" className={navLinkClass("/auth/signup")}>
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -154,11 +175,38 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="border-t border-border-color p-4">
+        <div className="border-t border-border-color p-4 space-y-3">
+          {user ? (
+            <Link
+               href="/profile"
+               onClick={() => setMenuOpen(false)}
+               className="btn-secondary flex w-full items-center justify-center gap-2 rounded-lg"
+            >
+              <HiOutlineUser size={18} />
+              Profile
+            </Link>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/auth/login"
+                onClick={() => setMenuOpen(false)}
+                className="btn-secondary w-full rounded-lg text-center"
+              >
+                Login
+              </Link>
+              <Link
+                href="/auth/signup"
+                onClick={() => setMenuOpen(false)}
+                className="btn-primary w-full rounded-lg text-center"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
           <Link
             href="/menu"
             onClick={() => setMenuOpen(false)}
-            className="btn-primary w-full rounded-lg"
+            className="btn-primary w-full rounded-lg text-center"
           >
             Order Now
           </Link>
