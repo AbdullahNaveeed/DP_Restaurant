@@ -86,13 +86,22 @@ export async function PUT(req, context) {
         ? body.imageURLs
         : [normalizedImageURL];
 
+    // Extract only editable fields — spreading raw body passes _id, __v,
+    // createdAt etc. which causes Mongoose CastError / immutable-field errors.
+    const updateData = {};
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.price !== undefined) updateData.price = body.price;
+    if (body.category !== undefined) updateData.category = body.category;
+    if (body.isAvailable !== undefined) updateData.isAvailable = body.isAvailable;
+    if (body.variants !== undefined) updateData.variants = body.variants;
+    if (body.options !== undefined) updateData.options = body.options;
+    updateData.imageURL = normalizedImageURL;
+    updateData.imageURLs = normalizedImageURLs;
+
     const item = await MenuItem.findByIdAndUpdate(
       id,
-      {
-        ...body,
-        imageURL: normalizedImageURL,
-        imageURLs: normalizedImageURLs,
-      },
+      updateData,
       {
         new: true,
         runValidators: true,
@@ -108,6 +117,9 @@ export async function PUT(req, context) {
     return NextResponse.json(item);
   } catch (error) {
     console.error("Menu PUT error:", error);
+    if (error.name === "ValidationError") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to update menu item" }, { status: 500 });
   }
 }
@@ -140,4 +152,9 @@ export async function DELETE(req, context) {
     console.error("Menu DELETE error:", error);
     return NextResponse.json({ error: "Failed to delete menu item" }, { status: 500 });
   }
+}
+
+// PATCH /api/menu/[id] - Admin: update menu item (alias for PUT)
+export async function PATCH(req, context) {
+  return PUT(req, context);
 }

@@ -32,7 +32,7 @@ async function dbConnect() {
       .catch((error) => {
         cached.promise = null;
         console.error("MongoDB connection failed:", error.message);
-        return null;
+        throw error;
       });
   }
 

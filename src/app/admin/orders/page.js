@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -45,12 +45,13 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const updateStatus = async (id, status) => {
+  const updateStatus = async (id, newStatus, currentStatus) => {
+    if (!newStatus || newStatus === currentStatus) return;
     try {
       await apiRequest(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: newStatus }),
         credentials: "same-origin",
       });
 
@@ -151,7 +152,7 @@ export default function AdminOrdersPage() {
                 </span>
                 <select
                   value={order.status}
-                  onChange={(e) => updateStatus(order._id, e.target.value)}
+                  onChange={(e) => updateStatus(order._id, e.target.value, order.status)}
                   disabled={order.status === "Delivered"}
                   className="input-field min-h-9 w-auto px-2 py-1.5 text-xs sm:text-sm"
                 >

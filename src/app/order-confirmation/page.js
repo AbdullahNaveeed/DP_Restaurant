@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Suspense } from "react";
 import Link from "next/link";
@@ -59,7 +59,12 @@ function ConfirmationContent() {
       </div>
 
       <div className="animate-fade-in-up flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Link href="/menu" className="btn-primary w-full rounded-full px-8 sm:w-auto">
+        {orderId && (
+          <Link href={`/order-tracking?id=${orderId}`} className="btn-primary w-full rounded-full px-8 sm:w-auto">
+            Track Your Order
+          </Link>
+        )}
+        <Link href="/menu" className="btn-outline w-full rounded-full px-8 sm:w-auto">
           Order Again
         </Link>
         <Link href="/" className="btn-outline w-full rounded-full px-8 sm:w-auto">
