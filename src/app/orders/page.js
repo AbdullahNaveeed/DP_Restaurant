@@ -72,7 +72,9 @@ export default function OrdersPage() {
                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border-color pb-4">
                      <div>
                        <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Order ID</p>
-                       <p className="font-mono text-xs sm:text-sm text-text-primary bg-bg-primary px-2 py-1 rounded inline-block">{order._id}</p>
+                       <p className="font-mono text-xs sm:text-sm text-text-primary bg-bg-primary px-2 py-1 rounded inline-block">
+                         {order._id ? `#${order._id.substring(0, 8).toUpperCase()}` : 'N/A'}
+                       </p>
                      </div>
                      <span className={`badge badge-${order.status?.toLowerCase() || 'pending'} shrink-0 text-xs sm:text-sm px-3 py-1`}>
                        {order.status || "Pending"}
@@ -92,7 +94,16 @@ export default function OrdersPage() {
                    </div>
                    
                    <div className="flex items-center justify-between pt-4 border-t border-border-color">
-                     <span className="text-xs font-medium text-text-muted">{new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                     <span className="text-xs font-medium text-text-muted">
+                       {new Date(order.createdAt).toLocaleString(undefined, { 
+                         year: 'numeric', 
+                         month: 'short', 
+                         day: 'numeric',
+                         hour: 'numeric',
+                         minute: '2-digit',
+                         hour12: true
+                       })}
+                     </span>
                      <div className="text-right">
                        <p className="text-xs text-text-muted mb-0.5">Total</p>
                        <span className="font-bold text-accent-gold text-lg">
