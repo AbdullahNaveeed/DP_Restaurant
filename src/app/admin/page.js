@@ -119,6 +119,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr className="border-b border-border-color">
                   <th className="px-3 py-3 text-left font-medium text-text-muted sm:px-4">Customer</th>
+                  <th className="px-3 py-3 text-left font-medium text-text-muted sm:px-4">Address</th>
                   <th className="px-3 py-3 text-left font-medium text-text-muted sm:px-4">Items</th>
                   <th className="px-3 py-3 text-left font-medium text-text-muted sm:px-4">Total</th>
                   <th className="px-3 py-3 text-left font-medium text-text-muted sm:px-4">Status</th>
@@ -132,6 +133,7 @@ export default function AdminDashboard() {
                     className="border-b border-border-color transition-colors last:border-0 hover:bg-bg-elevated/50"
                   >
                     <td className="px-3 py-3 text-text-primary sm:px-4">{order.customerName}</td>
+                    <td className="px-3 py-3 text-text-secondary sm:px-4 truncate max-w-[150px]">{order.address || "N/A"}</td>
                     <td className="px-3 py-3 text-text-secondary sm:px-4">{order.items?.length || 0}</td>
                     <td className="px-3 py-3 font-medium text-accent-gold sm:px-4">
                       {formatPKR(order.totalAmount)}

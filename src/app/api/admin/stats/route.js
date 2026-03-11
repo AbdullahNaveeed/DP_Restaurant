@@ -12,7 +12,7 @@ export async function GET(req) {
 
     const { data: allOrders, error } = await supabase
       .from("orders")
-      .select("id, status, total_amount, customer_name, created_at, payment_method, user_id, items")
+      .select("id, status, total_amount, customer_name, created_at, payment_method, user_id, items, address")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -39,6 +39,7 @@ export async function GET(req) {
        totalAmount: o.total_amount,
        paymentMethod: o.payment_method,
        createdAt: o.created_at,
+       address: o.address,
     }));
 
     const result = {

@@ -110,6 +110,10 @@ export default function AdminOrdersPage() {
                   <p className="mt-0.5 text-xs text-text-muted">
                     {new Date(order.createdAt).toLocaleDateString()} - {order.items?.length || 0} items
                   </p>
+                  <p className="mt-1 text-xs text-text-secondary flex items-start">
+                    <span className="font-medium mr-1">Address:</span>
+                    <span className="truncate">{order.address || "No address provided"}</span>
+                  </p>
                 </div>
                 <span className={`badge badge-${order.status.toLowerCase()} shrink-0`}>
                   {order.status}
