@@ -93,14 +93,5 @@ src/
 | Guest | Browse menu, add to cart, place orders |
 | Admin | Dashboard, CRUD menu items, manage orders |
 
-## Deployment (Vercel)
 
-1. Push to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy — zero config needed for Next.js
 
-## License
-
-MIT
->>>>>>> 46cb45f (Initial commit)
