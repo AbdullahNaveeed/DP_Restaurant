@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 # DP_Restaurant
 =======
-# La Maison — Restaurant Online Ordering System
+# Restaurant Online Ordering System
 
 A modern full-stack restaurant website built with Next.js 16, MongoDB, JWT auth, and Tailwind CSS v4.
 
