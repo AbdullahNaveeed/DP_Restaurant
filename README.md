@@ -1,6 +1,5 @@
-<<<<<<< HEAD
 # DP_Restaurant
-=======
+=================
 # Restaurant Online Ordering System
 
 A modern full-stack restaurant website built with Next.js 16, MongoDB, JWT auth, and Tailwind CSS v4.
